@@ -1,4 +1,4 @@
-name: CI/CD - Build and Push Docker Image
+name: CI/CD - Build and Deploy Memory App
 
 on:
   push:
@@ -6,13 +6,26 @@ on:
       - develop
 
 jobs:
+  test-memory-2026:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install 'file' (temporary for testing)
+        run: |
+          sudo apt-get update && sudo apt-get install -y file
+      - name: Check JPEG integrity
+        run: |
+          find html -name "*.jpg" -exec sh -c 'echo "Testing {}..." && file "{}" | grep -q "JPEG image data"' \;
+
   build_and_push:
+    needs: test-memory-2026
     runs-on: self-hosted
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-
       - name: Set up Docker variables
         id: docker_vars
         run: |
@@ -33,30 +46,26 @@ jobs:
           tags: ${{ steps.docker_vars.outputs.IMAGE_NAME }}:${{ steps.docker_vars.outputs.TAG }}
 
       - name: Display Image Tag
-        run: |
-          echo "Image successfully pushed with tag: ${{ steps.docker_vars.outputs.TAG }}"
-deploy:
+        run: echo "Image successfully pushed with tag: ${{ steps.docker_vars.outputs.TAG }}"
+
+  deploy:
     needs: build_and_push
     runs-on: self-hosted
 
     steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
       - name: Set up Docker variables
         id: docker_vars
         run: |
           echo "IMAGE_NAME=hugodef1/memory-2026" >> $GITHUB_OUTPUT
           echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
 
-      - name: Deploy application via SSH and Docker Compose
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-
-          script: |
-
-            cd /home/${{ secrets.SSH_USER }}/deployment/
+      - name: Deploy application locally via Docker Compose
+        run: |
+            mkdir -p deployment
+            cd deployment
 
             echo "version: '3.8'" > docker-compose.yml
             echo "services:" >> docker-compose.yml
@@ -70,4 +79,4 @@ deploy:
             docker-compose pull
             docker-compose up -d
 
-            echo "Deployment complete for tag: ${{ steps.docker_vars.outputs.TAG }}"
+            echo "Déploiement local réussi sur le port 80."
