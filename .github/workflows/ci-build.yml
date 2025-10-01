@@ -55,6 +55,9 @@ jobs:
           tags: ${{ steps.docker_vars.outputs.IMAGE_NAME }}:${{ steps.docker_vars.outputs.TAG }}
 
       - name: Display Image Tag
+      
+      
+      
         run: echo "Image successfully pushed with tag: ${{ steps.docker_vars.outputs.TAG }}"
 
   deploy:  
