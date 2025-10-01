@@ -12,11 +12,11 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Install 'file' (temporary for testing)
+      - name: Install and Check JPEG integrity
         run: |
-          sudo apt-get update && sudo apt-get install -y file
-      - name: Check JPEG integrity
-        run: |
+          sudo apt-get update
+          sudo apt-get install -y file
+          echo "Installation de 'file' réussie. Lancement du test d'intégrité...
           find html -name "*.jpg" -exec sh -c 'echo "Testing {}..." && file "{}" | grep -q "JPEG image data"' \;
 
   build_and_push:
