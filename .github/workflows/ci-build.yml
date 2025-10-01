@@ -72,7 +72,7 @@ jobs:
           mkdir -p deployment
           cd deployment
           
-          docker compose down || true 
+          sudo docker compose down || true 
           
           echo "version: '3.8'" > docker-compose.yml
           echo "services:" >> docker-compose.yml
@@ -83,7 +83,7 @@ jobs:
           echo "    ports:" >> docker-compose.yml
           echo "      - \"8080:80\"" >> docker-compose.yml
           echo "Déploiement de l'image $IMAGE_TAG..."
-          docker compose pull 
-          docker compose up -d
+          sudo docker compose pull 
+          sudo docker compose up -d
           
           echo "Déploiement local réussi sur http://localhost:8080."
