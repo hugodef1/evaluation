@@ -1,0 +1,92 @@
+name: CI/CD - Build and Deploy Memory App
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  test-memory-2026:
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install and Check JPEG integrity
+        run: |
+          sudo apt-get update && sudo apt-get install -y file
+          echo "Lancement du test d'intégrité des images..."
+          for file_path in html/data/*.jpg; do
+            echo "Testing $file_path..."
+            file "$file_path" | grep -q "JPEG image data"
+            if [ $? -ne 0 ]; then
+              echo "ERREUR: Le fichier $file_path n'est pas un JPEG valide."
+              exit 1
+            fi
+          done
+          echo "Test JPEG réussi : Tous les fichiers sont valides."
+
+  build_and_push: 
+    needs: test-memory-2026
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Set up Docker variables
+        id: docker_vars
+        run: |
+          echo "IMAGE_NAME=hugodef1/memory-2026" >> $GITHUB_OUTPUT
+          echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.docker_vars.outputs.IMAGE_NAME }}:${{ steps.docker_vars.outputs.TAG }}
+
+  deploy: 
+    needs: build_and_push
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker variables
+        id: docker_vars
+        run: |
+          echo "IMAGE_NAME=hugodef1/memory-2026" >> $GITHUB_OUTPUT
+          echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Deploy application locally via Docker Compose
+        run: |
+          IMAGE_TAG=${{ steps.docker_vars.outputs.IMAGE_NAME }}:${{ steps.docker_vars.outputs.TAG }}
+          
+          rm -rf deployment
+          mkdir -p deployment
+          cd deployment
+          
+          echo "version: '3.8'" > docker-compose.yml
+          echo "services:" >> docker-compose.yml
+          echo "  memory-app:" >> docker-compose.yml
+          echo "    image: $IMAGE_TAG" >> docker-compose.yml
+          echo "    container_name: memory-2026-prod" >> docker-compose.yml
+          echo "    restart: always" >> docker-compose.yml
+          echo "    ports:" >> docker-compose.yml
+          echo "      - \"8080:80\"" >> docker-compose.yml
+          
+          sudo docker compose down || true 
+          
+          echo "Déploiement de l'image $IMAGE_TAG..."
+          sudo docker compose pull 
+          sudo docker compose up -d
+          
+          echo "Déploiement local réussi sur http://localhost:8080."
