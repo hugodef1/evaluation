@@ -14,10 +14,19 @@ jobs:
 
       - name: Install and Check JPEG integrity
         run: |
-          sudo apt-get update
-          sudo apt-get install -y file
-          echo "Installation de 'file' réussie. Lancement du test d'intégrité...
-          find html -name "*.jpg" -exec sh -c 'echo "Testing {}..." && file "{}" | grep -q "JPEG image data"' \;
+          sudo apt-get update && sudo apt-get install -y file
+
+          echo "Lancement du test d'intégrité des images..."
+
+          for file_path in html/data/*.jpg; do
+            echo "Testing $file_path..."
+            file "$file_path" | grep -q "JPEG image data"
+            if [ $? -ne 0 ]; then
+              echo "ERREUR: Le fichier $file_path n'est pas un JPEG valide."
+              exit 1
+            fi
+          done
+          echo "Test JPEG réussi : Tous les fichiers sont valides."
 
   build_and_push:
     needs: test-memory-2026
