@@ -15,9 +15,7 @@ jobs:
       - name: Install and Check JPEG integrity
         run: |
           sudo apt-get update && sudo apt-get install -y file
-
           echo "Lancement du test d'intégrité des images..."
-
           for file_path in html/data/*.jpg; do
             echo "Testing $file_path..."
             file "$file_path" | grep -q "JPEG image data"
@@ -28,7 +26,7 @@ jobs:
           done
           echo "Test JPEG réussi : Tous les fichiers sont valides."
 
-  build_and_push:  
+  build_and_push: 
     needs: test-memory-2026
     runs-on: self-hosted
 
@@ -54,7 +52,7 @@ jobs:
           push: true
           tags: ${{ steps.docker_vars.outputs.IMAGE_NAME }}:${{ steps.docker_vars.outputs.TAG }}
 
-  deploy:  
+  deploy: 
     needs: build_and_push
     runs-on: self-hosted
 
@@ -70,18 +68,22 @@ jobs:
 
       - name: Deploy application locally via Docker Compose
         run: |
-            IMAGE_TAG=${{ steps.docker_vars.outputs.IMAGE_NAME }}:${{ steps.docker_vars.outputs.TAG }}
-            mkdir -p deployment
-            cd deployment
-            echo "version: '3.8'" > docker-compose.yml
-            echo "services:" >> docker-compose.yml
-            echo "  memory-app:" >> docker-compose.yml
-            echo "    image: $IMAGE_TAG" >> docker-compose.yml
-            echo "    container_name: memory-2026-prod" >> docker-compose.yml
-            echo "    restart: always" >> docker-compose.yml
-            echo "    ports:" >> docker-compose.yml
-            echo "      - \"8080:80\"" >> docker-compose.yml
-            echo "Déploiement de l'image $IMAGE_TAG..."
-            docker-compose pull
-            docker-compose up -d
-            echo "Déploiement local réussi sur http://localhost:8080."
+          IMAGE_TAG=${{ steps.docker_vars.outputs.IMAGE_NAME }}:${{ steps.docker_vars.outputs.TAG }}
+          mkdir -p deployment
+          cd deployment
+          
+          docker compose down || true 
+          
+          echo "version: '3.8'" > docker-compose.yml
+          echo "services:" >> docker-compose.yml
+          echo "  memory-app:" >> docker-compose.yml
+          echo "    image: $IMAGE_TAG" >> docker-compose.yml
+          echo "    container_name: memory-2026-prod" >> docker-compose.yml
+          echo "    restart: always" >> docker-compose.yml
+          echo "    ports:" >> docker-compose.yml
+          echo "      - \"8080:80\"" >> docker-compose.yml
+          echo "Déploiement de l'image $IMAGE_TAG..."
+          docker compose pull 
+          docker compose up -d
+          
+          echo "Déploiement local réussi sur http://localhost:8080."
