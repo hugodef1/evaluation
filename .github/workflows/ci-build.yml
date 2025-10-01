@@ -76,6 +76,7 @@ jobs:
             mkdir -p deployment
             cd deployment
 
+            # Création du docker-compose.yml avec indentations propres (2 espaces)
             echo "version: '3.8'" > docker-compose.yml
             echo "services:" >> docker-compose.yml
             echo "  memory-app:" >> docker-compose.yml
