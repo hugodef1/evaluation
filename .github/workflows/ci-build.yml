@@ -69,10 +69,10 @@ jobs:
       - name: Deploy application locally via Docker Compose
         run: |
           IMAGE_TAG=${{ steps.docker_vars.outputs.IMAGE_NAME }}:${{ steps.docker_vars.outputs.TAG }}
+          
+          rm -rf deployment
           mkdir -p deployment
           cd deployment
-          
-          sudo docker compose down || true 
           
           echo "version: '3.8'" > docker-compose.yml
           echo "services:" >> docker-compose.yml
@@ -82,6 +82,9 @@ jobs:
           echo "    restart: always" >> docker-compose.yml
           echo "    ports:" >> docker-compose.yml
           echo "      - \"8080:80\"" >> docker-compose.yml
+          
+          sudo docker compose down || true 
+          
           echo "Déploiement de l'image $IMAGE_TAG..."
           sudo docker compose pull 
           sudo docker compose up -d
