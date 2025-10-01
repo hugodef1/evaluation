@@ -73,18 +73,12 @@ jobs:
 
       - name: Deploy application locally via Docker Compose
         run: >-
-            # Définir la variable pour une meilleure lisibilité dans le script
-            FULL_IMAGE_TAG=${{ steps.docker_vars.outputs.IMAGE_NAME }}:${{ steps.docker_vars.outputs.TAG }}
-            
-            echo "Déploiement de l'image $FULL_IMAGE_TAG..."
-
-            mkdir -p deployment
-            cp docker-compose.yml deployment/
-
-            sed -i "s|image: hugodef1/memory-2026:latest|image: $FULL_IMAGE_TAG|g" deployment/docker-compose.yml
-
-            cd deployment
-            docker-compose pull
-            docker-compose up -d
-
-            echo "Déploiement local réussi sur http://localhost"
+          FULL_IMAGE_TAG=${{ steps.docker_vars.outputs.IMAGE_NAME }}:${{ steps.docker_vars.outputs.TAG }}
+          echo "Déploiement de l'image $FULL_IMAGE_TAG..."
+          mkdir -p deployment
+          cp docker-compose.yml deployment/
+          sed -i "s|image: hugodef1/memory-2026:latest|image: $FULL_IMAGE_TAG|g" deployment/docker-compose.yml
+          cd deployment
+          docker-compose pull
+          docker-compose up -d
+          echo "Déploiement local réussi sur http://localhost"
