@@ -3,33 +3,28 @@ name: CI/CD - Build and Push Docker Image
 on:
   push:
     branches:
-      - develop  # Déclenche le workflow à chaque push sur la branche 'develop'
+      - develop
 
 jobs:
   build_and_push:
-    # Utilise votre runner auto-hébergé. Assurez-vous qu'il est actif !
     runs-on: self-hosted
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # Définition du tag de l'image (les 7 premiers caractères du SHA de commit)
       - name: Set up Docker variables
         id: docker_vars
         run: |
           echo "IMAGE_NAME=hugodef1/memory-2026" >> $GITHUB_OUTPUT
-          # Le tag sera basé sur le SHA de commit court
           echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
 
-      # 1. Connexion à Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 2. Construction et Push de l'Image
       - name: Build and Push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -40,3 +35,39 @@ jobs:
       - name: Display Image Tag
         run: |
           echo "Image successfully pushed with tag: ${{ steps.docker_vars.outputs.TAG }}"
+deploy:
+    needs: build_and_push
+    runs-on: self-hosted
+
+    steps:
+      - name: Set up Docker variables
+        id: docker_vars
+        run: |
+          echo "IMAGE_NAME=hugodef1/memory-2026" >> $GITHUB_OUTPUT
+          echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Deploy application via SSH and Docker Compose
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+          script: |
+
+            cd /home/${{ secrets.SSH_USER }}/deployment/
+
+            echo "version: '3.8'" > docker-compose.yml
+            echo "services:" >> docker-compose.yml
+            echo "  memory-app:" >> docker-compose.yml
+            echo "    image: ${{ steps.docker_vars.outputs.IMAGE_NAME }}:${{ steps.docker_vars.outputs.TAG }}" >> docker-compose.yml
+            echo "    container_name: memory-2026-prod" >> docker-compose.yml
+            echo "    restart: always" >> docker-compose.yml
+            echo "    ports:" >> docker-compose.yml
+            echo "      - \"80:80\"" >> docker-compose.yml
+
+            docker-compose pull
+            docker-compose up -d
+
+            echo "Deployment complete for tag: ${{ steps.docker_vars.outputs.TAG }}"
