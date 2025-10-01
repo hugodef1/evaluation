@@ -72,21 +72,19 @@ jobs:
           echo "TAG=$(echo ${{ github.sha }} | cut -c1-7)" >> $GITHUB_OUTPUT
 
       - name: Deploy application locally via Docker Compose
-        run: |
+        run: >-
+            # Définir la variable pour une meilleure lisibilité dans le script
+            FULL_IMAGE_TAG=${{ steps.docker_vars.outputs.IMAGE_NAME }}:${{ steps.docker_vars.outputs.TAG }}
+            
+            echo "Déploiement de l'image $FULL_IMAGE_TAG..."
+
             mkdir -p deployment
+            cp docker-compose.yml deployment/
+
+            sed -i "s|image: hugodef1/memory-2026:latest|image: $FULL_IMAGE_TAG|g" deployment/docker-compose.yml
+
             cd deployment
-
-            # Création du docker-compose.yml avec indentations propres (2 espaces)
-            echo "version: '3.8'" > docker-compose.yml
-            echo "services:" >> docker-compose.yml
-            echo "  memory-app:" >> docker-compose.yml
-            echo "    image: ${{ steps.docker_vars.outputs.IMAGE_NAME }}:${{ steps.docker_vars.outputs.TAG }}" >> docker-compose.yml
-            echo "    container_name: memory-2026-prod" >> docker-compose.yml
-            echo "    restart: always" >> docker-compose.yml
-            echo "    ports:" >> docker-compose.yml
-            echo "      - \"80:80\"" >> docker-compose.yml
-
             docker-compose pull
             docker-compose up -d
 
-            echo "Déploiement local réussi sur le port 80."
+            echo "Déploiement local réussi sur http://localhost"
